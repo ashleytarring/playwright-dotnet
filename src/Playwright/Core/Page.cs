@@ -1199,7 +1199,7 @@ internal class Page : ChannelOwner, IPage
             if (pauseTask.Status != TaskStatus.RanToCompletion)
             {
                 return outputLocation != null && File.Exists(outputLocation)
-                    ? await File.ReadAllTextAsync(outputLocation).ConfigureAwait(false)
+                    ? File.ReadAllText(outputLocation)
                     : string.Empty;
             }
 
@@ -1209,7 +1209,7 @@ internal class Page : ChannelOwner, IPage
                 : string.Empty;
             return !string.IsNullOrEmpty(sourceText) || outputLocation == null || !File.Exists(outputLocation)
                 ? sourceText
-                : await File.ReadAllTextAsync(outputLocation).ConfigureAwait(false);
+                : File.ReadAllText(outputLocation);
         }
         finally
         {
