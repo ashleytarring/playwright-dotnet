@@ -1198,13 +1198,18 @@ internal class Page : ChannelOwner, IPage
             await Task.WhenAny(pauseTask, ClosedOrCrashedTcs.Task).ConfigureAwait(false);
             if (pauseTask.Status != TaskStatus.RanToCompletion)
             {
-                return string.Empty;
+                return outputLocation != null && File.Exists(outputLocation)
+                    ? await File.ReadAllTextAsync(outputLocation).ConfigureAwait(false)
+                    : string.Empty;
             }
 
             var result = await pauseTask.ConfigureAwait(false);
-            return result.HasValue && result.Value.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String
+            var sourceText = result.HasValue && result.Value.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String
                 ? source.GetString() ?? string.Empty
                 : string.Empty;
+            return !string.IsNullOrEmpty(sourceText) || outputLocation == null || !File.Exists(outputLocation)
+                ? sourceText
+                : await File.ReadAllTextAsync(outputLocation).ConfigureAwait(false);
         }
         finally
         {
