@@ -54,6 +54,6 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
   <Target Name="EnsurePrerequisitsRan" BeforeTargets="GetCopyToOutputDirectoryItems">
-    <Error Text="Playwright prerequisites are missing. Ensure you've ran `dotnet run --project ./src/tools/Playwright.Tooling/Playwright.Tooling.csproj -- download-drivers --basepath .`" Condition="!Exists('$(MSBuildProjectDirectory)\.drivers')" />
+    <Error Text="Playwright driver assets are missing or incomplete. Ensure you've run `dotnet run --project ./src/tools/Playwright.Tooling/Playwright.Tooling.csproj -- download-drivers --basepath .`" Condition="!Exists('$(MSBuildProjectDirectory)\.drivers\package\package.json')" />
   </Target>
 </Project>
