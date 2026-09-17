@@ -194,20 +194,8 @@ internal class DriverDownloader
                 tasks.Add(DownloadNodeAsync(client, driversDirectory.FullName, platformId, nodeSuffix));
             }
 
-            try
-            {
-                await Task.WhenAll(tasks).ConfigureAwait(false);
-                if (!File.Exists(Path.Combine(driversDirectory.FullName, "package", "package.json")))
-                {
-                    throw new Exception("The Playwright package was not downloaded completely.");
-                }
-                File.WriteAllText(stampFile, stamp);
-            }
-            catch
-            {
-                driversDirectory.Delete(true);
-                throw;
-            }
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+            File.WriteAllText(stampFile, stamp);
         }
 
         // update readme
