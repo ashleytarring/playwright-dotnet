@@ -1712,7 +1712,8 @@ public partial interface IPage
     /// cref="IBrowserType.LaunchAsync"/> option.
     /// </para>
     /// </remarks>
-    Task PauseAsync();
+    /// <returns>The generated inspector source for the paused execution.</returns>
+    Task<string> PauseAsync();
 
     /// <summary>
     /// <para>Returns the PDF buffer.</para>

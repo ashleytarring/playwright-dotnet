@@ -1178,10 +1178,10 @@ internal class Page : ChannelOwner, IPage
         });
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public async Task PauseAsync() => await PauseAsync(null).ConfigureAwait(false);
+    public async Task<string> PauseAsync() => await PauseAsync(null).ConfigureAwait(false);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public async Task PauseAsync(string? outputLocation)
+    public async Task<string> PauseAsync(string? outputLocation)
     {
         var defaultNavigationTimeout = Context._timeoutSettings.DefaultNavigationTimeout;
         var defaultTimeout = Context._timeoutSettings.DefaultTimeout;
@@ -1194,7 +1194,17 @@ internal class Page : ChannelOwner, IPage
             {
                 args = new() { ["outputFile"] = outputLocation };
             }
-            await Task.WhenAny(Context.SendMessageToServerAsync("pause", args), ClosedOrCrashedTcs.Task).ConfigureAwait(false);
+            var pauseTask = Context.SendMessageToServerAsync<JsonElement?>("pause", args);
+            await Task.WhenAny(pauseTask, ClosedOrCrashedTcs.Task).ConfigureAwait(false);
+            if (pauseTask.Status != TaskStatus.RanToCompletion)
+            {
+                return string.Empty;
+            }
+
+            var result = await pauseTask.ConfigureAwait(false);
+            return result.HasValue && result.Value.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String
+                ? source.GetString() ?? string.Empty
+                : string.Empty;
         }
         finally
         {
