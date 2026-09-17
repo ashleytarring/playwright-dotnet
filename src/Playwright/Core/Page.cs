@@ -1178,7 +1178,10 @@ internal class Page : ChannelOwner, IPage
         });
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public async Task PauseAsync()
+    public async Task PauseAsync() => await PauseAsync(null).ConfigureAwait(false);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public async Task PauseAsync(string? outputLocation)
     {
         var defaultNavigationTimeout = Context._timeoutSettings.DefaultNavigationTimeout;
         var defaultTimeout = Context._timeoutSettings.DefaultTimeout;
@@ -1186,7 +1189,12 @@ internal class Page : ChannelOwner, IPage
         Context.SetDefaultTimeout(0);
         try
         {
-            await Task.WhenAny(Context.SendMessageToServerAsync("pause"), ClosedOrCrashedTcs.Task).ConfigureAwait(false);
+            Dictionary<string, object?>? args = null;
+            if (outputLocation != null)
+            {
+                args = new() { ["outputFile"] = outputLocation };
+            }
+            await Task.WhenAny(Context.SendMessageToServerAsync("pause", args), ClosedOrCrashedTcs.Task).ConfigureAwait(false);
         }
         finally
         {

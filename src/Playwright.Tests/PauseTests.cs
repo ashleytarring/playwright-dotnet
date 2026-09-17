@@ -32,4 +32,14 @@ public class PauseTests : PageTestEx
         await Page.GotoAsync(Server.EmptyPage);
         await Page.PauseAsync();
     }
+
+    [Test]
+    public async Task ShouldRestoreDefaultTimeoutAfterPause()
+    {
+        Page.SetDefaultTimeout(1);
+
+        await Page.PauseAsync();
+
+        await PlaywrightAssert.ThrowsAsync<TimeoutException>(() => Page.WaitForSelectorAsync("#not-found"));
+    }
 }

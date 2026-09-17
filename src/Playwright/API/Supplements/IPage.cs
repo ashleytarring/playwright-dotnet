@@ -31,6 +31,13 @@ namespace Microsoft.Playwright;
 
 public partial interface IPage : IAsyncDisposable
 {
+    /// <summary>
+    /// Pauses script execution and writes recorded inspector code to the specified file.
+    /// </summary>
+    /// <param name="outputLocation">The path where inspector output should be written.</param>
+    /// <returns>A task that completes when the page resumes.</returns>
+    Task PauseAsync(string? outputLocation);
+
     Task<JsonElement?> EvaluateAsync(string expression, object? arg = default);
 
     Task<JsonElement?> EvalOnSelectorAsync(string selector, string expression, object? arg = default);
