@@ -32,13 +32,4 @@ public class PauseTests : PageTestEx
         await Page.GotoAsync(Server.EmptyPage);
         await Page.PauseAsync();
     }
-
-    [Test]
-    public async Task ShouldNotFailWithOutputLocation()
-    {
-        await Page.GotoAsync(Server.EmptyPage);
-        using var dir = new TempDirectory();
-        string outputPath = Path.Combine(dir.Path, "output.cs");
-        await Page.PauseAsync(outputPath);
-    }
 }

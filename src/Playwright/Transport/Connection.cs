@@ -54,6 +54,7 @@ internal class Connection : IDisposable
     private int _tracingCount;
     private int _lastId;
     private Exception? _closedError;
+    private bool _disposed;
 
     public Connection(LocalUtils? localUtils = null)
     {
@@ -128,20 +129,23 @@ internal class Connection : IDisposable
         ChannelOwner? @object,
         string method,
         Dictionary<string, object?>? args = null,
-        bool keepNulls = false)
-        => SendMessageToServerAsync<JsonElement?>(@object, method, args, keepNulls);
+        bool keepNulls = false,
+        float? timeout = null)
+        => SendMessageToServerAsync<JsonElement?>(@object, method, args, keepNulls, timeout);
 
     internal Task<T> SendMessageToServerAsync<T>(
         ChannelOwner? @object,
         string method,
         Dictionary<string, object?>? args = null,
-        bool keepNulls = false) => WrapApiCallAsync(() => InnerSendMessageToServerAsync<T>(@object, method, args, keepNulls), false, null);
+        bool keepNulls = false,
+        float? timeout = null) => WrapApiCallAsync(() => InnerSendMessageToServerAsync<T>(@object, method, args, keepNulls, timeout), false, null);
 
     private async Task<T> InnerSendMessageToServerAsync<T>(
         ChannelOwner? @object,
         string method,
         Dictionary<string, object?>? dictionary = null,
-        bool keepNulls = false)
+        bool keepNulls = false,
+        float? timeout = null)
     {
         // Fire-and-forget: server intentionally never replies to __waitInfo__,
         // so silently drop it after the connection is closed or the object was collected.
@@ -181,6 +185,10 @@ internal class Connection : IDisposable
             ["internal"] = isInternal,
             ["wallTime"] = DateTimeOffset.Now.ToUnixTimeMilliseconds(),
         };
+        if (timeout.HasValue)
+        {
+            metadata["timeout"] = timeout.Value;
+        }
         if (!string.IsNullOrEmpty(title))
         {
             metadata["title"] = title;
@@ -279,7 +287,7 @@ internal class Connection : IDisposable
             if (message.Error != null && message.Result == null)
             {
                 var exception = ParseException(message.Error.Error, FormatCallLog(message.Log));
-                exception.Data[ErrorDetailsDataKey] = message.ErrorDetails;
+                exception.Data[ErrorDetailsDataKey] = message.ErrorDetails?.GetRawText();
                 exception.Data[LogDataKey] = message.Log;
                 callback.TaskCompletionSource.TrySetException(exception);
             }
@@ -444,15 +452,6 @@ internal class Connection : IDisposable
     internal void DoCloseImpl(Exception closeError)
     {
         _closedError = closeError;
-        foreach (var callback in _callbacks)
-        {
-            callback.Value.TaskCompletionSource.TrySetException(closeError.InnerException ?? closeError);
-            // We need to make sure that the task is handled otherwise it will be reported as unhandled on the caller side.
-            // Its still possible to get the exception from the task.
-            callback.Value.TaskCompletionSource.Task.IgnoreException();
-        }
-        _callbacks.Clear();
-
         Dispose();
     }
 
@@ -477,10 +476,22 @@ internal class Connection : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (!disposing)
+        if (!disposing || _disposed)
         {
             return;
         }
+
+        _disposed = true;
+        _closedError ??= new TargetClosedException("Connection disposed");
+
+        foreach (var callback in _callbacks)
+        {
+            callback.Value.TaskCompletionSource.TrySetException(_closedError);
+            // We need to make sure that the task is handled otherwise it will be reported as unhandled on the caller side.
+            // Its still possible to get the exception from the task.
+            callback.Value.TaskCompletionSource.Task.IgnoreException();
+        }
+        _callbacks.Clear();
 
         _queue.Dispose();
         Close?.Invoke(this, new TargetClosedException("Connection disposed"));

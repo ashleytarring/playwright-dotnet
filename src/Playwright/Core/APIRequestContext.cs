@@ -147,7 +147,6 @@ internal class APIRequestContext : ChannelOwner, IAPIRequestContext
             ["ignoreHTTPSErrors"] = options?.IgnoreHTTPSErrors,
             ["maxRedirects"] = options?.MaxRedirects,
             ["maxRetries"] = options?.MaxRetries,
-            ["timeout"] = _timeoutSettings.Timeout(options?.Timeout),
             ["params"] = options?.Params?.ToDictionary(x => x.Key, x => x.Value.ToString()).ToProtocol(),
             ["encodedParams"] = options?.ParamsString,
             ["headers"] = options?.Headers?.ToProtocol(),
@@ -157,7 +156,7 @@ internal class APIRequestContext : ChannelOwner, IAPIRequestContext
             ["multipartData"] = (options?.Multipart as FormData)?.ToProtocol(),
         };
 
-        var response = await SendMessageToServerAsync("fetch", message).ConfigureAwait(false);
+        var response = await SendMessageToServerAsync("fetch", message, timeout: _timeoutSettings.Timeout(options?.Timeout)).ConfigureAwait(false);
         return new APIResponse(this, response?.GetProperty("response").ToObject<Transport.Protocol.APIResponse>()!);
     }
 
@@ -217,7 +216,13 @@ internal class APIRequestContext : ChannelOwner, IAPIRequestContext
     public async Task<string> StorageStateAsync(APIRequestContextStorageStateOptions? options = null)
     {
         string state = JsonSerializer.Serialize(
-            await SendMessageToServerAsync<object>("storageState").ConfigureAwait(false),
+            await SendMessageToServerAsync<object>(
+                "storageState",
+                new Dictionary<string, object?>
+                {
+                    ["indexedDB"] = options?.IndexedDB,
+                    ["opfs"] = options?.Opfs,
+                }).ConfigureAwait(false),
             JsonExtensions.DefaultJsonSerializerOptions);
 
         if (!string.IsNullOrEmpty(options?.Path))
